@@ -130,7 +130,8 @@ class TwitterOldDesignScraper(snscrape.base.Scraper):
 			url = f'https://twitter.com/{username}/status/{tweetID}'
 
 			date = None
-			if (timestampA := tweet.find('a', 'tweet-timestamp')):
+			timestampA = tweet.find('a', 'tweet-timestamp')
+			if timestampA:
 				timestampSpan = timestampA.find('span', '_timestamp')
 				if timestampSpan and timestampSpan.has_attr('data-time'):
 					date = datetime.datetime.fromtimestamp(int(timestampSpan['data-time']), datetime.timezone.utc)
@@ -140,7 +141,8 @@ class TwitterOldDesignScraper(snscrape.base.Scraper):
 			content = None
 			outlinks = []
 			tcooutlinks = []
-			if (contentP := tweet.find('p', 'tweet-text')):
+			contentP = tweet.find('p', 'tweet-text')
+			if (contentP):
 				content = contentP.text
 				for a in contentP.find_all('a'):
 					if a.has_attr('href') and not a['href'].startswith('/') and (not a.has_attr('class') or 'u-hidden' not in a['class']):
@@ -151,7 +153,8 @@ class TwitterOldDesignScraper(snscrape.base.Scraper):
 						tcooutlinks.append(a['href'])
 			else:
 				logger.warning(f'Failed to extract content for {url}')
-			if (card := tweet.find('div', 'card2')) and 'has-autoplayable-media' not in card['class']:
+			card = tweet.find('div', 'card2')
+			if card and 'has-autoplayable-media' not in card['class']:
 				for div in card.find_all('div'):
 					if div.has_attr('data-card-url'):
 						outlinks.append(div['data-card-url'])
@@ -183,7 +186,8 @@ class TwitterAPIScraper(snscrape.base.Scraper):
 			return
 		logger.info('Retrieving guest token')
 		r = self._get(self._baseUrl if url is None else url, headers = {'User-Agent': self._userAgent})
-		if (match := re.search(r'document\.cookie = decodeURIComponent\("gt=(\d+); Max-Age=10800; Domain=\.twitter\.com; Path=/; Secure"\);', r.text)):
+		match = re.search(r'document\.cookie = decodeURIComponent\("gt=(\d+); Max-Age=10800; Domain=\.twitter\.com; Path=/; Secure"\);', r.text)
+		if match:
 			logger.debug('Found guest token in HTML')
 			self._guestToken = match.group(1)
 		if 'gt' in r.cookies:

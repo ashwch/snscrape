@@ -251,7 +251,8 @@ def main():
 
 	i = 0
 	with _dump_locals_on_exception():
-		if args.withEntity and (entity := scraper.entity):
+		if args.withEntity and scraper.entity:
+			entity = scraper.entity
 			if args.jsonl:
 				print(entity.json())
 			else:
