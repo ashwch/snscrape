@@ -17,6 +17,8 @@ setuptools.setup(
 	install_requires = [
 		'requests[socks]',
 		'lxml',
+		'backports.cached_property',
+		'dataclasses',
 		'beautifulsoup4',
 		'pytz; python_version < "3.7.0"',
 	],

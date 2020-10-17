@@ -1,12 +1,13 @@
 import abc
 import dataclasses
 import datetime
-import functools
 import json
 import logging
 import requests
 import time
 import warnings
+
+from backports.cached_property import cached_property
 
 
 logger = logging.getLogger(__name__)
@@ -121,7 +122,7 @@ class Scraper:
 		This is the method implemented by subclasses for doing the actual retrieval/entity object creation. For accessing the scraper's entity, use the entity property.'''
 		return None
 
-	@functools.cached_property
+	@cached_property
 	def entity(self):
 		return self._get_entity()
 
