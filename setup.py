@@ -9,8 +9,7 @@ setuptools.setup(
 	classifiers = [
 		'Development Status :: 4 - Beta',
 		'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
-		'Programming Language :: Python :: 3.8',
-		'Programming Language :: Python :: 3.9',
+		'Programming Language :: Python :: 3.6',
 	],
 	packages = ['snscrape', 'snscrape.modules'],
 	setup_requires = ['setuptools_scm'],
@@ -19,7 +18,7 @@ setuptools.setup(
 		'requests[socks]',
 		'lxml',
 		'beautifulsoup4',
-		'pytz; python_version < "3.9.0"',
+		'pytz; python_version < "3.7.0"',
 	],
 	python_requires = '~=3.6',
 	entry_points = {
