@@ -113,7 +113,8 @@ class VKontakteUserScraper(snscrape.base.Scraper):
 		if 'time' in dateSpan.attrs:
 			return datetime.datetime.fromtimestamp(int(dateSpan['time']), datetime.timezone.utc)
 		months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-		if (match := re.match(r'^(?P<date>today|yesterday|(?P<day1>\d+)\s+(?P<month1>' + '|'.join(months) + ')|(?P<month2>' + '|'.join(months) + r')\s+(?P<day2>\d+),\s+(?P<year2>\d{4}))\s+at\s+(?P<hour>\d+):(?P<minute>\d+)\s+(?P<ampm>[ap]m)$', dateSpan.text)):
+		match = re.match(r'^(?P<date>today|yesterday|(?P<day1>\d+)\s+(?P<month1>' + '|'.join(months) + ')|(?P<month2>' + '|'.join(months) + r')\s+(?P<day2>\d+),\s+(?P<year2>\d{4}))\s+at\s+(?P<hour>\d+):(?P<minute>\d+)\s+(?P<ampm>[ap]m)$', dateSpan.text)
+		if match:
 			# Datetime information down to minutes
 			tz = timezone('Europe/Moscow')
 			if match.group('date') in ('today', 'yesterday'):
@@ -133,7 +134,8 @@ class VKontakteUserScraper(snscrape.base.Scraper):
 				hour += 12
 			minute = int(match.group('minute'))
 			return localised_datetime(tz, year, month, day, hour, minute)
-		if (match := re.match(r'^(?P<day>\d+)\s+(?P<month>' + '|'.join(months) + r')\s+(?P<year>\d{4})$', dateSpan.text)):
+		match = re.match(r'^(?P<day>\d+)\s+(?P<month>' + '|'.join(months) + r')\s+(?P<year>\d{4})$', dateSpan.text)
+		if match:
 			# Date only
 			return datetime.date(int(match.group('year')), months.index(match.group('month')) + 1, int(match.group('day')))
 		if dateSpan.text != 'video': # Silently ignore video reposts which have no original date attached
@@ -147,16 +149,19 @@ class VKontakteUserScraper(snscrape.base.Scraper):
 		else:
 			dateSpan = post.find('div', class_ = 'copy_post_date').find('a', class_ = 'published_by_date')
 		textDiv = post.find('div', class_ = 'wall_post_text')
-		outlinks = [h for a in textDiv.find_all('a') if (h := self._away_a_to_url(a))] if textDiv else []
-		if (mediaLinkDiv := post.find('div', class_ = 'media_link')) and \
-		   (mediaLinkA := mediaLinkDiv.find('a', class_ = 'media_link__title')) and \
-		   (href := self._away_a_to_url(mediaLinkA)) and \
-		   href not in outlinks:
+		outlinks = [h for h in (self._away_a_to_url(a) for a in textDiv.find_all('a')) if h] if textDiv else []
+		mediaLinkDiv = post.find('div', class_ = 'media_link')
+		mediaLinkA = None
+		if mediaLinkDiv:
+			mediaLinkA = mediaLinkDiv.find('a', class_ = 'media_link__title')
+		href = self._away_a_to_url(mediaLinkA)
+		if mediaLinkDiv and mediaLinkA and href and href not in outlinks:
 			outlinks.append(href)
 		photos = None
 		video = None
-		if (thumbsDiv := (post.find('div', class_ = 'wall_text') if not isCopy else post).find('div', class_ = 'page_post_sized_thumbs')) and \
-		   not (not isCopy and thumbsDiv.parent.name == 'div' and 'class' in thumbsDiv.parent.attrs and 'copy_quote' in thumbsDiv.parent.attrs['class']): # Skip post quotes
+		thumbsDiv = (post.find('div', class_ = 'wall_text') if not isCopy else post).find('div', class_ = 'page_post_sized_thumbs')
+
+		if thumbsDiv and not (not isCopy and thumbsDiv.parent.name == 'div' and 'class' in thumbsDiv.parent.attrs and 'copy_quote' in thumbsDiv.parent.attrs['class']): # Skip post quotes
 			photos = []
 			for a in thumbsDiv.find_all('a', class_ = 'page_post_thumb_wrap'):
 				if 'data-photo-id' not in a.attrs and 'data-video' not in a.attrs:
@@ -164,12 +169,13 @@ class VKontakteUserScraper(snscrape.base.Scraper):
 					continue
 				if 'data-video' in a.attrs:
 					# Video
+					begin = a['style'].find('background-image: url(') + 22
 					video = Video(
 						id = a['data-video'],
 						list = a['data-list'],
 						duration = int(a['data-duration']),
 						url = f'https://vk.com{a["href"]}',
-						thumbUrl = a['style'][(begin := a['style'].find('background-image: url(') + 22) : a['style'].find(')', begin)],
+						thumbUrl = a['style'][begin : a['style'].find(')', begin)],
 					)
 					continue
 				# From here on: photo
@@ -186,10 +192,12 @@ class VKontakteUserScraper(snscrape.base.Scraper):
 					x_ = f'{x}_'
 					if not photoObj['temp'][x_][0].startswith('https://'):
 						photoObj['temp'][x_][0] = f'{photoObj["temp"]["base"]}{photoObj["temp"][x_][0]}'
+				
+				x_ = f'{x}_'
 				if any(k not in {'base', 'w', 'w_', 'x', 'x_', 'y', 'y_', 'z', 'z_'} for k in photoObj['temp'].keys()) or \
 				   not all(photoObj['temp'][x] in (photoObj['temp'][f'{x}_'][0], photoObj['temp'][f'{x}_'][0] + '.jpg') for x in singleLetterKeys) or \
 				   not all(photoObj['temp'][x].startswith('https://sun') and '.userapi.com/' in photoObj['temp'][x] for x in singleLetterKeys) or \
-				   not all(len(photoObj['temp'][(x_ := f'{x}_')]) == 3 and isinstance(photoObj['temp'][x_][1], int) and isinstance(photoObj['temp'][x_][2], int) for x in singleLetterKeys):
+				   not all(len(photoObj['temp'][x_]) == 3 and isinstance(photoObj['temp'][x_][1], int) and isinstance(photoObj['temp'][x_][2], int) for x in singleLetterKeys):
 					logger.warning(f'Photo thumb wrap on {url} has unexpected data structure, skipping')
 					continue
 				photoVariants = []
@@ -198,7 +206,8 @@ class VKontakteUserScraper(snscrape.base.Scraper):
 					photoVariants.append(PhotoVariant(url = f'{photoObj["temp"][x_][0]}.jpg' if '.jpg' not in photoObj['temp'][x_][0] else photoObj['temp'][x_][0], width = photoObj['temp'][x_][1], height = photoObj['temp'][x_][2]))
 				photoUrl = f'https://vk.com{a["href"]}' if 'href' in a.attrs and a['href'].startswith('/photo') and a['href'][6:].strip('0123456789-_') == '' else None
 				photos.append(Photo(variants = photoVariants, url = photoUrl))
-		quotedPost = self._post_div_to_item(quoteDiv, isCopy = True) if (quoteDiv := post.find('div', class_ = 'copy_quote')) else None
+		quoteDiv = post.find('div', class_ = 'copy_quote')
+		quotedPost = self._post_div_to_item(quoteDiv, isCopy = True) if quoteDiv else None
 		return VKontaktePost(
 		  url = url,
 		  date = self._date_span_to_date(dateSpan),
@@ -233,7 +242,8 @@ class VKontakteUserScraper(snscrape.base.Scraper):
 			logger.warning('Private profile')
 			return
 
-		if (profileDeleted := soup.find('h5', class_ = 'profile_deleted_text')):
+		profileDeleted = soup.find('h5', class_='profile_deleted_text')
+		if profileDeleted:
 			# Unclear what this state represents, so just log website text.
 			logger.warning(profileDeleted.text)
 			return
@@ -310,11 +320,13 @@ class VKontakteUserScraper(snscrape.base.Scraper):
 		nameH1 = soup.find('h1', class_ = 'page_name')
 		kwargs['name'] = nameH1.text
 		kwargs['verified'] = bool(nameH1.find('div', class_ = 'page_verified'))
-
-		if (descriptionDiv := soup.find('div', id = 'page_current_info')):
+        
+		descriptionDiv = soup.find('div', id = 'page_current_info')
+		if descriptionDiv:
 			kwargs['description'] = descriptionDiv.text
-
-		if (infoDiv := soup.find('div', id = 'page_info_wrap')):
+		
+		infoDiv = soup.find('div', id = 'page_info_wrap')
+		if infoDiv:
 			websites = []
 			for rowDiv in infoDiv.find_all('div', class_ = ['profile_info_row', 'group_info_row']):
 				if 'profile_info_row' in rowDiv['class']:
@@ -339,8 +351,9 @@ class VKontakteUserScraper(snscrape.base.Scraper):
 				return int(s[:-1]) * 1000, 1000
 			else:
 				return int(s.replace(',', '')), 1
-
-		if (countsDiv := soup.find('div', class_ = 'counts_module')):
+		
+		countsDiv = soup.find('div', class_ = 'counts_module')
+		if countsDiv:
 			for a in countsDiv.find_all('a', class_ = 'page_counter'):
 				count, granularity = parse_num(a.find('div', class_ = 'count').text)
 				label = a.find('div', class_ = 'label').text
@@ -348,14 +361,18 @@ class VKontakteUserScraper(snscrape.base.Scraper):
 					label = f'{label}s'
 				if label in ('followers', 'posts', 'photos', 'tags'):
 					kwargs[label] = snscrape.base.IntWithGranularity(count, granularity)
-
-		if (idolsDiv := soup.find('div', id = 'profile_idols')):
-			if (topDiv := idolsDiv.find('div', class_ = 'header_top')) and topDiv.find('span', class_ = 'header_label').text == 'Following':
+		
+		idolsDiv = soup.find('div', id = 'profile_idols')
+		if idolsDiv:
+			topDiv = idolsDiv.find('div', class_ = 'header_top')
+			if topDiv and topDiv.find('span', class_ = 'header_label').text == 'Following':
 				kwargs['following'] = snscrape.base.IntWithGranularity(*parse_num(topDiv.find('span', class_ = 'header_count').text))
 
 		# On public pages, this is where followers are listed
-		if (followersDiv := soup.find('div', id = 'public_followers')):
-			if (topDiv := followersDiv.find('div', class_ = 'header_top')) and topDiv.find('span', class_ = 'header_label').text == 'Followers':
+		followersDiv = soup.find('div', id = 'public_followers')
+		if followersDiv:
+			topDiv = followersDiv.find('div', class_ = 'header_top')
+			if topDiv and topDiv.find('span', class_ = 'header_label').text == 'Followers':
 				kwargs['followers'] = snscrape.base.IntWithGranularity(*parse_num(topDiv.find('span', class_ = 'header_count').text))
 
 		return User(**kwargs)
