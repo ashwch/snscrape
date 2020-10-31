@@ -1,7 +1,7 @@
-import importlib.metadata
+import importlib_metadata
 
 
 try:
-	__version__ = importlib.metadata.version('snscrape')
-except importlib.metadata.PackageNotFoundError:
+	__version__ = importlib_metadata.version('snscrape')
+except importlib_metadata.PackageNotFoundError:
 	__version__ = None

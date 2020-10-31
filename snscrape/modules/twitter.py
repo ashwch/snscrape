@@ -321,9 +321,11 @@ class TwitterAPIScraper(snscrape.base.Scraper):
 		kwargs['conversationId'] = tweet['conversation_id'] if 'conversation_id' in tweet else int(tweet['conversation_id_str'])
 		kwargs['lang'] = tweet['lang']
 		kwargs['source'] = tweet['source']
-		if (match := re.search(r'href=[\'"]?([^\'" >]+)', tweet['source'])):
+		match = re.search(r'href=[\'"]?([^\'" >]+)', tweet['source'])
+		if match:
 			kwargs['sourceUrl'] = match.group(1)
-		if (match := re.search(r'>([^<]*)<', tweet['source'])):
+		match = re.search(r'>([^<]*)<', tweet['source'])
+		if match:
 			kwargs['sourceLabel'] = match.group(1)
 		if 'extended_entities' in tweet and 'media' in tweet['extended_entities']:
 			media = []
