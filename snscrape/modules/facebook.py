@@ -314,7 +314,7 @@ class FacebookGroupScraper(FacebookCommonScraper):
 		pageletDataPrefixLength = len('"GroupEntstreamPagelet",')
 		spuriousForLoopPattern = re.compile(r'^for \(;;\);')
 
-		baseUrl = f'https://www.facebook.com/groups/{self._group}/?sorting_setting=CHRONOLOGICAL'
+		baseUrl = f'https://upload.facebook.com/groups/{self._group}/?sorting_setting=CHRONOLOGICAL'
 		r = self._get(baseUrl, headers = headers)
 		if r.status_code == 404:
 			logger.warning('Group does not exist')
@@ -344,7 +344,7 @@ class FacebookGroupScraper(FacebookCommonScraper):
 		while data:
 			# As on the user profile pages, the web app sends a lot of additional parameters, but those all seem to be unnecessary (although some change the response format, e.g. from JSON to HTML)
 			r = self._get(
-				f'https://www.facebook.com/ajax/pagelet/generic.php/GroupEntstreamPagelet',
+				f'https://upload.facebook.com/ajax/pagelet/generic.php/GroupEntstreamPagelet',
 				params = {'data': data, '__a': 1},
 				headers = headers,
 			  )

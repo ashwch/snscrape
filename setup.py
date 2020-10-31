@@ -23,6 +23,9 @@ setuptools.setup(
 		'pytz; python_version < "3.7.0"',
 	],
 	python_requires = '~=3.6',
+	extras_require = {
+		'test': ['coverage'],
+	},
 	entry_points = {
 		'console_scripts': [
 			'snscrape = snscrape._cli:main',
