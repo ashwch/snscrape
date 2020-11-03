@@ -56,7 +56,6 @@ setuptools.setup(
 		'backports.cached_property',
 		'dataclasses',
 		'beautifulsoup4',
-		'importlib_metadata',
 		'pytz; python_version < "3.7.0"',
 	],
 	python_requires = '~=3.6',
